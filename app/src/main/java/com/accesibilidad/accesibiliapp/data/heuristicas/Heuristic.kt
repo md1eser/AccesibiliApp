@@ -15,4 +15,3 @@ sealed interface Heuristic {
 
     fun calcular(barriers: List<BoundingBox>): List<IssueWithBarriers>
 }
- 

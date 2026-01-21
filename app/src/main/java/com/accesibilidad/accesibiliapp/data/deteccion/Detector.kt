@@ -96,41 +96,25 @@ class Detector(
 
         if (compatibilityList.isDelegateSupportedOnThisDevice) {
             try {
-                Log.i(TAG, "Trying GPU delegate...")
+                val bestOptions = compatibilityList.bestOptionsForThisDevice
 
-                val gpuDelegate = GpuDelegate()
-                val gpuOptions = Interpreter.Options().apply {
-                    addDelegate(gpuDelegate)
+                val options = Interpreter.Options().apply {
+                    addDelegate(GpuDelegate(bestOptions))
                 }
 
-                val gpuInterpreter = Interpreter(model, gpuOptions)
+                Log.i(TAG, "Usando GPU con la mejor configuración automática")
+                return Interpreter(model, options)
 
-                val inputTensor = gpuInterpreter.getInputTensor(0)
-                val outputTensor = gpuInterpreter.getOutputTensor(0)
-
-                val dummyInput =
-                    ByteBuffer.allocateDirect(inputTensor.numBytes())
-                        .order(java.nio.ByteOrder.nativeOrder())
-
-                val dummyOutput =
-                    ByteBuffer.allocateDirect(outputTensor.numBytes())
-                        .order(java.nio.ByteOrder.nativeOrder())
-
-                gpuInterpreter.run(dummyInput, dummyOutput)
-
-                Log.i(TAG, "GPU delegate WORKS, using GPU")
-                return gpuInterpreter
-
-            } catch (e: Throwable) {
-                Log.w(TAG, "GPU delegate FAILED, falling back to CPU", e)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error al usar las 'bestOptions' de GPU", e)
             }
         }
 
-        Log.i(TAG, "Using CPU interpreter")
+        // Si no es compatible o falla, usamos CPU
         val cpuOptions = Interpreter.Options().apply {
             setNumThreads(4)
+            setUseXNNPACK(true)
         }
-
         return Interpreter(model, cpuOptions)
     }
 

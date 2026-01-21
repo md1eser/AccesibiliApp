@@ -23,7 +23,7 @@ navigationCommon = "2.9.6"
 navigationRuntime = "2.9.6"
 navigationCompose = "2.9.6"
 
-litert = "1.0.0"
+litert = "1.4.1"
 
 
 [libraries]
