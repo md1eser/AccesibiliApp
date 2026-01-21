@@ -23,6 +23,7 @@ import com.accesibilidad.accesibiliapp.vistas.camera.CameraDetectionScreen
 import com.accesibilidad.accesibiliapp.vistas.camera.ImageDetectionContent
 import com.accesibilidad.accesibiliapp.ui.theme.AccesibiliAppTheme
 import com.accesibilidad.accesibiliapp.vistas.curation.BoundingBoxCurationScreen
+import com.accesibilidad.accesibiliapp.vistas.review.HeuristicReviewScreen
 
 
 @AndroidEntryPoint
@@ -89,7 +90,7 @@ fun Screen() {
 
         // Revisión de heurísticas
         composable("heuristicReviewScreen") {
-            //HeuristicReviewScreen(navController = navController)
+            HeuristicReviewScreen(navController = navController)
         }
 
         // Detalles de reporte (Argumento obligatorio)
