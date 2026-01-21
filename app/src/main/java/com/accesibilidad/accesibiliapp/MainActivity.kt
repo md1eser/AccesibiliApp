@@ -47,7 +47,7 @@ fun Screen() {
     ) {
         // Lista de reportes (Home)
         composable("reports") {
-            //ReportListScreen(navController = navController)
+            ReportListScreen(navController = navController)
         }
 
         // Menú de heurísticas

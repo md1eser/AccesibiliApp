@@ -1,17 +1,15 @@
 plugins {
 
     alias(libs.plugins.android.application)
-
     //alias(libs.plugins.kotlin.android) // -> AGP +9.0 ya viene integrado
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.kotlin.compose)
-    //alias(libs.plugins.hilt.android)
-    //alias(libs.plugins.hilt.android)
-    //alias(libs.plugins.kotlin.compose) apply false
 }
 
 android {
+
+
     namespace = "com.accesibilidad.accesibiliapp"
     compileSdk {
         version = release(36)
@@ -46,6 +44,20 @@ android {
 }
 
 dependencies {
+
+
+    // Litert
+    implementation(libs.litert)
+    implementation(libs.litert.support)
+    implementation(libs.litert.metadata)
+    implementation(libs.litert.gpu)
+
+    // Coroutines
+    implementation(libs.kotlinx.coroutines.android)
+
+    // Serialización
+    implementation(libs.kotlinx.serialization.json)
+
     implementation(libs.androidx.core.ktx)
     // Compose
     implementation(platform(libs.androidx.compose.bom))
@@ -54,6 +66,10 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.material)
+    implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.compose.material.icons.extended)
+
+
 
     // CameraX
     implementation(libs.androidx.camera.core)
@@ -67,6 +83,7 @@ dependencies {
     // Hilt
     implementation(libs.hilt.android)
     implementation(libs.hilt.testing)
+    implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 
     // Room
@@ -74,5 +91,5 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
-    // Tensorflow, not yet
 }
+
