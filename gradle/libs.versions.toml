@@ -7,7 +7,7 @@ coreKtx = "1.17.0"
 composeBom = "2026.01.00"
 activityCompose = "1.12.2"
 hilt = "2.58"
-hiltNavigationCompose = "1.2.0"
+hiltNavigationCompose = "1.3.0"
 kotlinxCoroutinesAndroid="1.10.2"
 kotlinxSerializationJson="1.9.0"
 litertGpu="1.4.1"
@@ -82,6 +82,7 @@ litert = { group = "com.google.ai.edge.litert", name = "litert", version.ref = "
 litert-support = { group = "com.google.ai.edge.litert", name = "litert-support-api", version.ref = "litert" }
 litert-metadata = { group = "com.google.ai.edge.litert", name = "litert-metadata", version.ref = "litert" }
 litert-gpu = { group = "com.google.ai.edge.litert", name = "litert-gpu", version.ref = "litert" }
+litert-gpu-api = { group = "com.google.ai.edge.litert", name = "litert-gpu-api", version.ref = "litert" }
 
 
 [plugins]
@@ -90,3 +91,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref="kotlin"}
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version = "1.9.10" }

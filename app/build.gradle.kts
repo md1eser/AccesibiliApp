@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -51,6 +52,7 @@ dependencies {
     implementation(libs.litert.support)
     implementation(libs.litert.metadata)
     implementation(libs.litert.gpu)
+    implementation(libs.litert.gpu.api)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
