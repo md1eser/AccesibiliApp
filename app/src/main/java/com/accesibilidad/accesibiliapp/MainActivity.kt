@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import com.accesibilidad.accesibiliapp.vistas.camera.CameraDetectionScreen
 import com.accesibilidad.accesibiliapp.vistas.camera.ImageDetectionContent
 import com.accesibilidad.accesibiliapp.ui.theme.AccesibiliAppTheme
+import com.accesibilidad.accesibiliapp.vistas.curation.BoundingBoxCurationScreen
 
 
 @AndroidEntryPoint
@@ -83,7 +84,7 @@ fun Screen() {
 
         // Curación de bounding boxes
         composable("boundingBoxCuration") {
-            //BoundingBoxCurationScreen(navController = navController)
+            BoundingBoxCurationScreen(navController = navController)
         }
 
         // Revisión de heurísticas
