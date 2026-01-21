@@ -1,0 +1,50 @@
+description: Ultralytics best model trained on /content/dataset_final/dataset.yaml
+author: Ultralytics
+date: '2025-11-25T03:28:51.264070'
+version: 8.3.231
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: Door Handle
+  1: Electric Socket
+  2: Grab Bar
+  3: Knife
+  4: Medication
+  5: Rug
+  6: Scissors
+  7: Smoke Alarm
+  8: Switch
+  9: TV
+  10: bed
+  11: bowl
+  12: cell phone
+  13: chair
+  14: clock
+  15: couch
+  16: cup
+  17: dining table
+  18: fork
+  19: keyboard
+  20: laptop
+  21: microwave
+  22: mouse
+  23: oven
+  24: potted plant
+  25: refrigerator
+  26: remote
+  27: spoon
+  28: toilet
+  29: vase
+args:
+  batch: 1
+  fraction: 1.0
+  half: false
+  int8: false
+  nms: false
+channels: 3
