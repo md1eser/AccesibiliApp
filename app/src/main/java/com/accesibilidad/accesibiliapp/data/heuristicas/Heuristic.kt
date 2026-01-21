@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 
 @Polymorphic
 @Serializable
-interface Heuristic {
+sealed interface Heuristic {
     val id: String
     val name: String
     val desc: String
@@ -15,3 +15,4 @@ interface Heuristic {
 
     fun calcular(barriers: List<BoundingBox>): List<IssueWithBarriers>
 }
+ 

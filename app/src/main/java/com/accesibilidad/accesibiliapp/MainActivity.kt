@@ -52,7 +52,7 @@ fun Screen() {
 
         // Menú de heurísticas
         composable("heuristicMenu") {
-            //HeuristicListScreen(navController = navController)
+            HeuristicListScreen(navController = navController)
         }
 
         // Detección de imagen desde URI (Argumento opcional)

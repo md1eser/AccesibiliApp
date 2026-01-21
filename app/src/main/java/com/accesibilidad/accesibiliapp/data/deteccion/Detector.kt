@@ -11,24 +11,16 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-
-
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.gpu.CompatibilityList
 import org.tensorflow.lite.gpu.GpuDelegate
-
-
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.common.ops.CastOp
 import org.tensorflow.lite.support.common.ops.NormalizeOp
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
-//import org.tensorflow.lite.support.image.
-
-
-
 import java.nio.ByteBuffer
 import kotlin.math.max
 import kotlin.math.min
@@ -54,196 +46,219 @@ class Detector(
     val labels = _labels.asStateFlow()
 
     private var interpreter: Interpreter? = null
+
     private var tensorWidth = 0
     private var tensorHeight = 0
     private var numChannel = 0
     private var numElements = 0
 
-    private val options = Interpreter.Options()
-    private val imageProcessor: ImageProcessor
+    private val imageProcessor: ImageProcessor = ImageProcessor.Builder()
+        .add(NormalizeOp(0f, 255f))
+        .add(CastOp(INPUT_IMAGE_TYPE))
+        .build()
 
-    init {
-        val compatibilityList = CompatibilityList()
-        if (compatibilityList.isDelegateSupportedOnThisDevice) {
-            options.addDelegate(GpuDelegate())
-            Log.d(TAG, "GPU delegate activated.")
-        } else {
-            options.setNumThreads(4)
-            Log.d(TAG, "GPU not supported. Using CPU.")
-        }
-
-        imageProcessor = ImageProcessor.Builder()
-            .add(NormalizeOp(0.0f, 255.0f))
-            .add(CastOp(INPUT_IMAGE_TYPE))
-            .build()
-    }
-
-    suspend fun initialize() = withContext(Dispatchers.IO) {
+    // -----------------------------
+    // Inicialización segura
+    // -----------------------------
+    suspend fun initialize() = withContext(Dispatchers.Default) {
         val model = FileUtil.loadMappedFile(context, modelPath)
-        interpreter = Interpreter(model, options)
+        interpreter = createInterpreter(model)
 
         var loadedLabels = MetaData.extractNamesFromMetadata(model)
         if (loadedLabels.isEmpty()) {
-            if (labelPath != null) {
-                loadedLabels = MetaData.extractNamesFromLabelFile(context, labelPath)
+            loadedLabels = if (labelPath != null) {
+                MetaData.extractNamesFromLabelFile(context, labelPath)
             } else {
-                Log.d(TAG, "Model not contains metadata, provide LABELS_PATH in Constants.kt")
-                loadedLabels = MetaData.TEMP_CLASSES
+                Log.w(TAG, "No labels found, using temp classes")
+                MetaData.TEMP_CLASSES
             }
         }
         _labels.emit(loadedLabels)
 
-        val inputShape = interpreter?.getInputTensor(0)?.shape()
-        val outputShape = interpreter?.getOutputTensor(0)?.shape()
+        val inputShape = interpreter!!.getInputTensor(0).shape()
+        val outputShape = interpreter!!.getOutputTensor(0).shape()
 
-        if (inputShape != null) {
-            // Asumiendo formato [batch, width, height, channels] o [batch, channels, width, height]
-            // El original tenía una lógica específica para inputShape[1] == 3
-            tensorWidth = inputShape[1]
-            tensorHeight = inputShape[2]
+        // Input: [1, w, h, c] o [1, c, w, h]
+        tensorWidth = inputShape[1]
+        tensorHeight = inputShape[2]
+        if (inputShape[1] == 3) {
+            tensorWidth = inputShape[2]
+            tensorHeight = inputShape[3]
+        }
 
-            // Corrección basada en el decompilado original para formatos transpuestos
-            if (inputShape[1] == 3) {
-                tensorWidth = inputShape[2]
-                tensorHeight = inputShape[3]
+        // Output: [1, channels, elements]
+        numChannel = outputShape[1]
+        numElements = outputShape[2]
+    }
+
+    private fun createInterpreter(model: ByteBuffer): Interpreter {
+        val compatibilityList = CompatibilityList()
+
+        if (compatibilityList.isDelegateSupportedOnThisDevice) {
+            try {
+                Log.i(TAG, "Trying GPU delegate...")
+
+                val gpuDelegate = GpuDelegate()
+                val gpuOptions = Interpreter.Options().apply {
+                    addDelegate(gpuDelegate)
+                }
+
+                val gpuInterpreter = Interpreter(model, gpuOptions)
+
+                val inputTensor = gpuInterpreter.getInputTensor(0)
+                val outputTensor = gpuInterpreter.getOutputTensor(0)
+
+                val dummyInput =
+                    ByteBuffer.allocateDirect(inputTensor.numBytes())
+                        .order(java.nio.ByteOrder.nativeOrder())
+
+                val dummyOutput =
+                    ByteBuffer.allocateDirect(outputTensor.numBytes())
+                        .order(java.nio.ByteOrder.nativeOrder())
+
+                gpuInterpreter.run(dummyInput, dummyOutput)
+
+                Log.i(TAG, "GPU delegate WORKS, using GPU")
+                return gpuInterpreter
+
+            } catch (e: Throwable) {
+                Log.w(TAG, "GPU delegate FAILED, falling back to CPU", e)
             }
         }
 
-        if (outputShape != null) {
-            numChannel = outputShape[1]
-            numElements = outputShape[2]
+        Log.i(TAG, "Using CPU interpreter")
+        val cpuOptions = Interpreter.Options().apply {
+            setNumThreads(4)
         }
+
+        return Interpreter(model, cpuOptions)
     }
 
-    suspend fun restart(isGpu: Boolean) = withContext(Dispatchers.IO) {
+
+    suspend fun restart() = withContext(Dispatchers.Default) {
         interpreter?.close()
-        // Nota: El parámetro isGpu no se usaba en el bloque original decompilado,
-        // pero reinicializaba el interpreter.
         val model = FileUtil.loadMappedFile(context, modelPath)
-        interpreter = Interpreter(model, options)
+        interpreter = createInterpreter(model)
     }
-
-    fun isActive(): Boolean = interpreter != null
 
     fun close() {
         interpreter?.close()
         interpreter = null
     }
 
+    fun isActive(): Boolean = interpreter != null
+
+    // -----------------------------
+    // Detección
+    // -----------------------------
     suspend fun detect(frame: Bitmap) {
-        if (interpreter == null) {
-            Log.e(TAG, "Interpreter is not initialized.")
-            return
-        }
-        if (tensorWidth == 0 || tensorHeight == 0 || numChannel == 0 || numElements == 0) {
-            Log.e(TAG, "Tensor dimensions are invalid. Detection aborted.")
-            return
-        }
+        val localInterpreter = interpreter ?: return
 
-        val inferenceStartTime = SystemClock.uptimeMillis()
+        if (tensorWidth == 0 || tensorHeight == 0) return
 
-        val resizedBitmap = Bitmap.createScaledBitmap(frame, tensorWidth, tensorHeight, false)
+        val startTime = SystemClock.uptimeMillis()
+
+        val resized = Bitmap.createScaledBitmap(frame, tensorWidth, tensorHeight, false)
         val tensorImage = TensorImage(INPUT_IMAGE_TYPE)
-        tensorImage.load(resizedBitmap)
-        val processedImage = imageProcessor.process(tensorImage)
-        val imageBuffer: ByteBuffer = processedImage.buffer
+        tensorImage.load(resized)
 
-        val output = TensorBuffer.createFixedSize(intArrayOf(1, numChannel, numElements), OUTPUT_IMAGE_TYPE)
+        val processed = imageProcessor.process(tensorImage)
+        val inputBuffer = processed.buffer
 
-        interpreter?.run(imageBuffer, output.buffer)
+        val outputBuffer = TensorBuffer.createFixedSize(
+            intArrayOf(1, numChannel, numElements),
+            OUTPUT_IMAGE_TYPE
+        )
 
-        val outputArray = output.floatArray
-        val bestBoxes = bestBox(outputArray)
+        localInterpreter.run(inputBuffer, outputBuffer.buffer)
 
-        val inferenceTime = SystemClock.uptimeMillis() - inferenceStartTime
+        val boxes = bestBox(outputBuffer.floatArray)
+        val inferenceTime = SystemClock.uptimeMillis() - startTime
 
-        _results.emit(DetectionResult(bestBoxes ?: emptyList(), inferenceTime, frame))
+        _results.emit(
+            DetectionResult(
+                boxes ?: emptyList(),
+                inferenceTime,
+                frame
+            )
+        )
     }
 
+    // -----------------------------
+    // Post-procesamiento
+    // -----------------------------
     private fun bestBox(array: FloatArray): List<BoundingBox>? {
-        val boundingBoxes = ArrayList<BoundingBox>()
+        val boxes = ArrayList<BoundingBox>()
         val currentLabels = _labels.value
 
-        // Iterar sobre los elementos detectados
         for (c in 0 until numElements) {
             var maxIdx = -1
             var maxConf = CONFIDENCE_THRESHOLD
 
-            // Los primeros 4 valores son coordenadas, las clases empiezan en index 4
-            // El array está aplanado, por eso saltamos de numElements en numElements
-
-            // Buscar la clase con mayor confianza
             for (j in 4 until numChannel) {
-                val arrayIdx = (numElements * j) + c
-                if (array[arrayIdx] > maxConf) {
-                    maxConf = array[arrayIdx]
+                val idx = (numElements * j) + c
+                if (array[idx] > maxConf) {
+                    maxConf = array[idx]
                     maxIdx = j - 4
                 }
             }
 
-            if (maxConf > CONFIDENCE_THRESHOLD) {
-                if (maxIdx in currentLabels.indices) {
-                    val clsName = currentLabels[maxIdx]
+            if (maxIdx in currentLabels.indices) {
+                val cx = array[c]
+                val cy = array[numElements + c]
+                val w = array[(numElements * 2) + c]
+                val h = array[(numElements * 3) + c]
 
-                    // Extraer coordenadas
-                    // c = cx, numElements+c = cy, etc...
-                    val cx = array[c]
-                    val cy = array[numElements + c]
-                    val w = array[(numElements * 2) + c]
-                    val h = array[(numElements * 3) + c]
+                val x1 = cx - w / 2f
+                val y1 = cy - h / 2f
+                val x2 = cx + w / 2f
+                val y2 = cy + h / 2f
 
-                    val x1 = cx - (w / 2f)
-                    val y1 = cy - (h / 2f)
-                    val x2 = cx + (w / 2f)
-                    val y2 = cy + (h / 2f)
-
-                    if (x1 in 0f..1f && y1 in 0f..1f && x2 in 0f..1f && y2 in 0f..1f) {
-                        boundingBoxes.add(
-                            BoundingBox(x1, y1, x2, y2, cx, cy, w, h, maxConf, maxIdx, clsName)
+                if (x1 in 0f..1f && y1 in 0f..1f && x2 in 0f..1f && y2 in 0f..1f) {
+                    boxes.add(
+                        BoundingBox(
+                            x1, y1, x2, y2,
+                            cx, cy, w, h,
+                            maxConf, maxIdx,
+                            currentLabels[maxIdx]
                         )
-                    }
-                } else {
-                    Log.e(TAG, "Invalid index for labels: $maxIdx")
+                    )
                 }
             }
         }
 
-        if (boundingBoxes.isEmpty()) return null
-
-        return applyNMS(boundingBoxes)
+        return if (boxes.isEmpty()) null else applyNMS(boxes)
     }
 
     private fun applyNMS(boxes: List<BoundingBox>): List<BoundingBox> {
-        val sortedBoxes = boxes.sortedByDescending { it.cnf }.toMutableList()
-        val selectedBoxes = ArrayList<BoundingBox>()
+        val sorted = boxes.sortedByDescending { it.cnf }.toMutableList()
+        val selected = ArrayList<BoundingBox>()
 
-        while (sortedBoxes.isNotEmpty()) {
-            val first = sortedBoxes.first()
-            selectedBoxes.add(first)
-            sortedBoxes.remove(first)
+        while (sorted.isNotEmpty()) {
+            val first = sorted.removeAt(0)
+            selected.add(first)
 
-            val iterator = sortedBoxes.iterator()
-            while (iterator.hasNext()) {
-                val nextBox = iterator.next()
-                val iou = calculateIoU(first, nextBox)
-                if (iou >= IOU_THRESHOLD) {
-                    iterator.remove()
+            val it = sorted.iterator()
+            while (it.hasNext()) {
+                val box = it.next()
+                if (calculateIoU(first, box) >= IOU_THRESHOLD) {
+                    it.remove()
                 }
             }
         }
-        return selectedBoxes
+        return selected
     }
 
-    private fun calculateIoU(box1: BoundingBox, box2: BoundingBox): Float {
-        val x1 = max(box1.x1, box2.x1)
-        val y1 = max(box1.y1, box2.y1)
-        val x2 = min(box1.x2, box2.x2)
-        val y2 = min(box1.y2, box2.y2)
+    private fun calculateIoU(a: BoundingBox, b: BoundingBox): Float {
+        val x1 = max(a.x1, b.x1)
+        val y1 = max(a.y1, b.y1)
+        val x2 = min(a.x2, b.x2)
+        val y2 = min(a.y2, b.y2)
 
-        val intersectionArea = max(0f, x2 - x1) * max(0f, y2 - y1)
-        val box1Area = box1.w * box1.h
-        val box2Area = box2.w * box2.h
+        val inter = max(0f, x2 - x1) * max(0f, y2 - y1)
+        val areaA = a.w * a.h
+        val areaB = b.w * b.h
 
-        return intersectionArea / (box1Area + box2Area - intersectionArea)
+        return inter / (areaA + areaB - inter)
     }
 }

@@ -18,13 +18,13 @@ import javax.inject.Singleton
 // Módulo de serialización para heurísticas polimórficas
 private val heuristicModule = SerializersModule {
     polymorphic(Heuristic::class) {
-        subclass(ExistenceHeuristic::class)
+        subclass(ExistenceHeuristic::class, ExistenceHeuristic.serializer())
         // Agrega aquí otras subclases de Heuristic cuando las tengas
     }
 }
 
 // Instancia de Json configurada para heurísticas
-private val json = Json {
+val json = Json {
     serializersModule = heuristicModule
     classDiscriminator = "heuristicType"
     prettyPrint = true
