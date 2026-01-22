@@ -23,6 +23,7 @@ import com.accesibilidad.accesibiliapp.vistas.camera.CameraDetectionScreen
 import com.accesibilidad.accesibiliapp.vistas.camera.ImageDetectionContent
 import com.accesibilidad.accesibiliapp.ui.theme.AccesibiliAppTheme
 import com.accesibilidad.accesibiliapp.vistas.curation.BoundingBoxCurationScreen
+import com.accesibilidad.accesibiliapp.vistas.report.details.ReportDetailsScreen
 import com.accesibilidad.accesibiliapp.vistas.review.HeuristicReviewScreen
 
 
@@ -103,8 +104,7 @@ fun Screen() {
             )
         ) { backStackEntry ->
             val reportId = backStackEntry.arguments?.getLong("reportId") ?: -1L
-            // Si tu Screen recibe el ID, pásalo aquí
-            //ReportDetailsScreen(navController = navController /*, reportId = reportId */)
+            ReportDetailsScreen(navController = navController /*, reportId = reportId */)
         }
     }
 }
