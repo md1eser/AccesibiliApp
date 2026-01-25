@@ -106,7 +106,7 @@ private fun HeuristicFormBodyExistence(
                 value = selectedTargets.joinToString(", "),
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("Etiquetas objetivo (Targets)") },
+                label = { Text("Objetos") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier.fillMaxWidth().menuAnchor()
             )
