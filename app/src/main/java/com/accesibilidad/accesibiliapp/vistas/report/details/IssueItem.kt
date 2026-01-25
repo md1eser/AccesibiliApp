@@ -1,13 +1,14 @@
 package com.accesibilidad.accesibiliapp.vistas.report.details
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.accesibilidad.accesibiliapp.data.entity.IssueWithBarriers
 import com.accesibilidad.accesibiliapp.vistas.common.rememberColorForId
@@ -17,47 +18,71 @@ fun IssueItem(
     issueWithBarriers: IssueWithBarriers,
     onClick: () -> Unit
 ) {
-    // Recupera el color asociado al ID del issue (visible en el código descompilado)
     val color = rememberColorForId(issueWithBarriers.issue.id)
+    val issue = issueWithBarriers.issue
+    val barrierCount = issueWithBarriers.barriers.size
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp) // El padding de 16.dp se aplica antes del clickable en el binario
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            // El color de fondo es SurfaceContainerHigh según el código descompilado
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        // --- ZONA NO DESCOMPILADA ---
-        // El contenido interno (IssueItem$lambda$0) lanzó una excepción en el archivo Java.
-        // Aquí deberías restaurar tu diseño original. Un ejemplo típico sería:
-
-        /*
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Indicador de color
+            // 1. Indicador Visual de Color
             Box(
                 modifier = Modifier
-                    .size(12.dp)
+                    .size(16.dp)
                     .background(color, CircleShape)
             )
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Column {
+            // 2. Información del Issue
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = issueWithBarriers.issue.metadata?.name ?: "Problema sin nombre",
-                    style = MaterialTheme.typography.titleMedium
+                    text = issue.type ?: "Tipo desconocido",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                // Otros detalles...
+
+                if (!issue.desc.isNullOrBlank()) {
+                    Text(
+                        text = issue.desc,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // 3. Badge o Contador de Barreras
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        text = "$barrierCount barreras detectadas",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
             }
+
+            
         }
-        */
     }
 }

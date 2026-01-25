@@ -46,6 +46,8 @@ android {
 
 dependencies {
 
+    implementation(libs.charts)
+
     // Dependencias para testeo
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

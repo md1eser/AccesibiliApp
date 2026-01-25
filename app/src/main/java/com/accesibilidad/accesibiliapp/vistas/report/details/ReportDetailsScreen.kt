@@ -3,6 +3,8 @@ package com.accesibilidad.accesibiliapp.vistas.report.details
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Category
@@ -108,9 +110,49 @@ fun ReportDetailsScreen(
     }
 
     if (showCategoryDialog) {
-        // Aquí iría la implementación de tu diálogo de categorías
-        // Probablemente un AlertDialog con una lista LazyColumn de 'categories'
-        // Al seleccionar: viewModel.updateReportCategory(report!!, category.id)
+        AlertDialog(
+            onDismissRequest = { showCategoryDialog = false },
+            title = { Text("Seleccionar categoría") },
+            text = {
+                // Usamos LazyColumn por si hay muchas categorías
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 400.dp) // Limita la altura para que no ocupe toda la pantalla
+                ) {
+                    items(categories) { category ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    // Llamamos al ViewModel para actualizar
+                                    viewModel.updateReportCategory(report!!, category.id)
+                                    showCategoryDialog = false
+                                }
+                                .padding(vertical = 8.dp), // Espaciado para mejor tacto
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Asumimos que report.metadata.categoryId es donde guardas el ID actual.
+                            // Si el campo tiene otro nombre, ajusta esta línea.
+                            val isSelected = report!!.metadata.categoryId == category.id
+
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = null // El click lo maneja la Row completa
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = category.name,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCategoryDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 
     if (showDeleteDialog) {

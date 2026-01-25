@@ -43,7 +43,6 @@ fun ReportListScreen(
     var text by remember { mutableStateOf("") }
     var newName by remember { mutableStateOf("") }
 
-// Launchers para cámara/galería
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->

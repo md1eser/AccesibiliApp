@@ -1,5 +1,6 @@
 [versions]
 
+charts="0.2.4-alpha"
 espressoCore="3.7.0"
 junit="4.13.2"
 junitVersion="1.3.0"
@@ -50,6 +51,7 @@ androidx-activity-compose = { group = "androidx.activity", name = "activity-comp
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
 # Hilt
+charts = { module = "com.github.tehras:charts", version.ref = "charts" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 hilt-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt" }
