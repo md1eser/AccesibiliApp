@@ -1,6 +1,7 @@
 package com.accesibilidad.accesibiliapp.vistas.review
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,6 +17,7 @@ import com.accesibilidad.accesibiliapp.data.repository.ReportRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,7 +25,6 @@ class HeuristicReviewViewModel @Inject constructor(
     private val captureRepository: CaptureRepository,
     private val heuristicsRepository: HeuristicRepository,
     private val reportRepository: ReportRepository,
-    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     // 1. Detección cruda (tiene los BoundingBoxes y el Bitmap)
@@ -84,18 +85,17 @@ class HeuristicReviewViewModel @Inject constructor(
         _dismissedIssues.update { current -> current - issuesToRestore.toSet() }
     }
 
-    // --- Generación del Reporte ---
 
     suspend fun generateReport(reportName: String): Long? {
         val currentCategoryId = captureRepository.categoryId.value
-        val currentImageUri = captureRepository.imageUri.value
-
-        // Obtenemos los issues que quedaron activos (ya calculados y filtrados)
+        val currentBitmap = captureRepository.detectionResult.value?.bitmap
         val activeIssues = issues.value.values.flatten()
 
         return withContext(Dispatchers.IO) {
             try {
-                val imageBytes = uriToByteArray(currentImageUri)
+                // CAMBIO: Convertimos el bitmap de memoria a bytes
+                // Si currentBitmap es null (raro en este punto), guardamos un array vacío
+                val imageBytes = bitmapToByteArray(currentBitmap)
 
                 val metadata = ReportMetadata(
                     name = reportName,
@@ -116,13 +116,13 @@ class HeuristicReviewViewModel @Inject constructor(
         }
     }
 
-    private fun uriToByteArray(uri: Uri?): ByteArray {
-        if (uri == null) return ByteArray(0)
-        return try {
-            context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: ByteArray(0)
-        } catch (e: Exception) {
-            ByteArray(0)
-        }
+    private fun bitmapToByteArray(bitmap: Bitmap?): ByteArray {
+        if (bitmap == null) return ByteArray(0)
+
+        val stream = ByteArrayOutputStream()
+        // Compresión JPEG calidad 90 (buen balance calidad/espacio)
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream)
+        return stream.toByteArray()
     }
 
     override fun onCleared() {

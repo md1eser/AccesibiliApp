@@ -99,8 +99,7 @@ fun ReportListScreen(
                 StyledListItem(
                     onClick = { navController.navigate("reports/${report?.metadata?.id}") }
                 ) {
-                    // Contenido del item del reporte (restaurado genéricamente ya que depende de StyledListItem)
-                    Text(text = "Reporte ${report?.metadata?.id}")
+                    Text(text = "${report?.metadata?.name}")
                 }
             }
 
