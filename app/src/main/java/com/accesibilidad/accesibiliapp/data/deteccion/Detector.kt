@@ -105,7 +105,7 @@ class Detector(
                 Log.i(TAG, "Usando GPU con la mejor configuración automática")
                 return Interpreter(model, options)
 
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "Error al usar las 'bestOptions' de GPU", e)
             }
         }

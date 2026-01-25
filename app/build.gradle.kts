@@ -46,6 +46,17 @@ android {
 
 dependencies {
 
+    // Dependencias para testeo
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation(libs.robolectric)
+
+    // Tests Instrumentados (Para Room/DAOs en dispositivo/emulador)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.room.testing)
 
     // Litert
     implementation(libs.litert)

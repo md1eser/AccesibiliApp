@@ -14,8 +14,6 @@ class ReportRepository @Inject constructor(
 ) {
 
     suspend fun insertReport(report: ReportEntity): Long {
-        // En el código decompilado se ve que separa los issues y las barreras
-        // antes de enviarlos al DAO.
         val issues = report.issues.map { it.issue }
         val barriers = report.issues.map { it.barriers }
 
@@ -26,7 +24,7 @@ class ReportRepository @Inject constructor(
         return reportDao.getReport(id)
     }
 
-    fun getAllReports(): Flow<List<ReportEntity>> {
+    fun getAllReports(): Flow<List<ReportEntity?>> {
         return reportDao.getAllReports()
     }
 

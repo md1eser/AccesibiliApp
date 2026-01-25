@@ -51,11 +51,11 @@ interface ReportDao {
 
     @Transaction // Necesario porque Report contiene relaciones
     @Query("SELECT * FROM reports WHERE id = :id")
-    fun getReport(id: Long): Flow<ReportEntity>
+    fun getReport(id: Long): Flow<ReportEntity?>
 
     @Transaction
     @Query("SELECT * FROM reports")
-    fun getAllReports(): Flow<List<ReportEntity>>
+    fun getAllReports(): Flow<List<ReportEntity?>>
 
     // Query extraída de lambda$getCalculatedFinalScoreForReport$8
     @Query("SELECT IFNULL(SUM(score), 0.0) FROM Issue WHERE reportId = :reportId")

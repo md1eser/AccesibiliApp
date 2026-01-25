@@ -51,11 +51,11 @@ class ReportListViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     // Filtra los reportes según la categoría actual
-    val reportsToShow: StateFlow<List<ReportEntity>> = combine(
+    val reportsToShow: StateFlow<List<ReportEntity?>> = combine(
         reportRepository.getAllReports(),
         currentParentId
     ) { allReports, parentId ->
-        allReports.filter { it.metadata.categoryId == parentId }
+        allReports.filter { it?.metadata?.categoryId == parentId }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Obtiene el objeto Category actual basado en el ID seleccionado
