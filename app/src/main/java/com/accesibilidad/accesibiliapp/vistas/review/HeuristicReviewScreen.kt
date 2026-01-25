@@ -4,9 +4,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.navigation.NavController
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch // Importante para lanzar la corrutina
+import com.accesibilidad.accesibiliapp.vistas.common.ImageOverlayDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,8 +28,12 @@ fun HeuristicReviewScreen(
     // Estados locales de la UI
     var showNameReportDialog by remember { mutableStateOf(false) }
     var reportNameText by remember { mutableStateOf("") }
+    var showImageOverlayDialog by remember { mutableStateOf(false) }
+    var selectedHeuristicName by remember { mutableStateOf("") }
+
 
     val totalIssues = issuesByHeuristic.values.sumOf { it.size }
+    val image = viewModel.getImage()?.asImageBitmap();
 
     Scaffold(
         topBar = {
@@ -46,7 +53,8 @@ fun HeuristicReviewScreen(
             issuesByHeuristic = issuesByHeuristic,
             dismissedHeuristics = dismissedHeuristics,
             onHeuristicClick = { heuristicName ->
-                // Aquí iría tu lógica original de ver detalles si la necesitas
+                selectedHeuristicName = heuristicName
+                showImageOverlayDialog = true
             },
             onToggleHeuristic = { heuristicName, isChecked ->
                 if (isChecked) {
@@ -102,4 +110,19 @@ fun HeuristicReviewScreen(
             }
         )
     }
+
+
+    if (showImageOverlayDialog && image != null) {
+
+        ImageOverlayDialog(
+            imageBitmap = image,
+            boundingBoxes = issuesByHeuristic[selectedHeuristicName]
+                ?.flatMap { it.barriers }
+                ?.map { it.toBoundingBox() }
+                ?: emptyList(),
+            onDismissRequest = { showImageOverlayDialog = false },
+            overlayColor = Color.Red
+        )
+    }
+
 }

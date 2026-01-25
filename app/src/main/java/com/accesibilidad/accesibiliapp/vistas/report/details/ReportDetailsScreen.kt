@@ -1,10 +1,14 @@
 package com.accesibilidad.accesibiliapp.vistas.report.details
 
-
+import androidx.compose.ui.unit.IntSize // Por si lo querés usar
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Category
@@ -13,10 +17,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.accesibilidad.accesibiliapp.data.entity.IssueWithBarriers
+import com.accesibilidad.accesibiliapp.vistas.common.ImageOverlayDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -176,10 +184,32 @@ fun ReportDetailsScreen(
         )
     }
 
+
+
     if (showIssueDetailDialog && selectedIssue != null) {
-        // Asumiendo que IssueDetailScreen es un Dialog o una pantalla nueva
-        // Según el código descompilado, parece que se pasa un Bitmap.
-        // Nota: Asegúrate de tener el bitmap disponible o pasar null si es opcional.
-        // IssueDetailScreen(issueWithBarriers = selectedIssue!!, reportBitmap = ...)
+        val imageByteArray = report?.metadata?.image
+
+        // 1. Guardamos el tamaño real de la imagen escalada
+        var imageSize by remember { mutableStateOf(IntSize.Zero) }
+
+        val imageBitmap: ImageBitmap = remember(imageByteArray) {
+            imageByteArray?.let {
+                try {
+                    BitmapFactory.decodeByteArray(it, 0, it.size).asImageBitmap()
+                } catch (e: Exception) { null }
+            } as ImageBitmap
+        }
+
+        ImageOverlayDialog(
+            imageBitmap = imageBitmap,
+            // Transform your specific data into the generic list needed by the component
+            boundingBoxes = selectedIssue!!.barriers.map { it.toBoundingBox() },
+            onDismissRequest = { showIssueDetailDialog = false },
+            overlayColor = Color.Red // Optional, defaults to Red
+        )
     }
+
+
+
+
 }

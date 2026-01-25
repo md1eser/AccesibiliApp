@@ -85,6 +85,10 @@ class HeuristicReviewViewModel @Inject constructor(
         _dismissedIssues.update { current -> current - issuesToRestore.toSet() }
     }
 
+    fun getImage(): Bitmap? {
+       return captureRepository.detectionResult.value?.bitmap
+    }
+
 
     suspend fun generateReport(reportName: String): Long? {
         val currentCategoryId = captureRepository.categoryId.value
