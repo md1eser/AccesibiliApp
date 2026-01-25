@@ -1,4 +1,4 @@
-package com.accesibilidad.accesibiliapp.vistas.report.details
+package com.accesibilidad.accesibiliapp.vistas.report.details.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize

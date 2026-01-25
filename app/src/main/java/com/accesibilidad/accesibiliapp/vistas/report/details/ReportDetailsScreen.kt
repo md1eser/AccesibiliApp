@@ -1,50 +1,38 @@
 package com.accesibilidad.accesibiliapp.vistas.report.details
 
-import androidx.compose.ui.unit.IntSize // Por si lo querés usar
 import android.graphics.BitmapFactory
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.accesibilidad.accesibiliapp.data.entity.IssueWithBarriers
 import com.accesibilidad.accesibiliapp.vistas.common.ImageOverlayDialog
+import com.accesibilidad.accesibiliapp.vistas.report.details.components.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportDetailsScreen(
     navController: NavController,
-    viewModel: ReportDetailsViewModel  = hiltViewModel()
+    viewModel: ReportDetailsViewModel = hiltViewModel()
 ) {
-    // Recolectar estados del ViewModel
+    // 1. Estados Globales
     val report by viewModel.report.collectAsState()
     val categories by viewModel.allCategories.collectAsState()
 
-    // Estados locales para diálogos
+    // 2. Estados Locales (Visibilidad de diálogos)
     var showCategoryDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var showIssueDetailDialog by remember { mutableStateOf(false) }
-    var selectedIssue by remember { mutableStateOf<IssueWithBarriers?>(null) }
-    var newName by remember { mutableStateOf("") }
 
-    // Si el reporte es nulo, mostrar carga
+    // Estado para el detalle (Overlay)
+    var selectedIssueForOverlay by remember { mutableStateOf<IssueWithBarriers?>(null) }
+
+    // 3. Loading State
     if (report == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -52,164 +40,102 @@ fun ReportDetailsScreen(
         return
     }
 
-    // Contenido Principal
+    val currentReport = report!! // Smart cast seguro aquí abajo
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = report!!.metadata.name,
-                        modifier = Modifier.clickable {
-                            newName = report!!.metadata.name
-                            showRenameDialog = true
-                        }
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showCategoryDialog = true }) {
-                        Icon(Icons.Default.Category, contentDescription = "Cambiar categoría")
-                    }
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Eliminar reporte")
-                    }
-                }
+            ReportDetailsTopBar(
+                title = currentReport.metadata.name,
+                onBackClick = { navController.popBackStack() },
+                onTitleClick = { showRenameDialog = true },
+                onCategoryClick = { showCategoryDialog = true },
+                onDeleteClick = { showDeleteDialog = true }
             )
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues)) {
-            ReportDetailsContent(
-                report = report!!,
+
+        // 4. Contenido Principal
+        Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+
+            // Gráfico (40% pantalla)
+            IssueScoreChart(
+                issues = currentReport.issues,
+                modifier = Modifier
+                    .weight(0.4f)
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            )
+
+            Text(
+                text = "Problemáticas Encontradas",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            // Lista (60% pantalla)
+            IssueList(
+                issues = currentReport.issues,
                 onIssueClick = { issue ->
-                    // Buscar el IssueWithBarriers correspondiente al Issue simple
-                    selectedIssue = report!!.issues.find { it.issue.id == issue.id }
-                    showIssueDetailDialog = true
-                }
+                    // Buscamos el objeto completo para el overlay
+                    selectedIssueForOverlay = currentReport.issues.find { it.issue.id == issue.id }
+                },
+                modifier = Modifier.weight(0.6f)
             )
         }
     }
 
-    // --- Diálogos ---
+    // --- 5. Gestión de Diálogos (Externalizados) ---
 
     if (showRenameDialog) {
-        AlertDialog(
-            onDismissRequest = { showRenameDialog = false },
-            title = { Text("Nuevo nombre") },
-            text = {
-                OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    label = { Text("Nombre") }
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.updateReportName(report!!, newName)
-                    showRenameDialog = false
-                }) {
-                    Text("Guardar")
-                }
-            }
+        RenameReportDialog(
+            currentName = currentReport.metadata.name,
+            onDismiss = { showRenameDialog = false },
+            onConfirm = { newName -> viewModel.updateReportName(currentReport, newName) }
         )
     }
 
     if (showCategoryDialog) {
-        AlertDialog(
-            onDismissRequest = { showCategoryDialog = false },
-            title = { Text("Seleccionar categoría") },
-            text = {
-                // Usamos LazyColumn por si hay muchas categorías
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 400.dp) // Limita la altura para que no ocupe toda la pantalla
-                ) {
-                    items(categories) { category ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    // Llamamos al ViewModel para actualizar
-                                    viewModel.updateReportCategory(report!!, category.id)
-                                    showCategoryDialog = false
-                                }
-                                .padding(vertical = 8.dp), // Espaciado para mejor tacto
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Asumimos que report.metadata.categoryId es donde guardas el ID actual.
-                            // Si el campo tiene otro nombre, ajusta esta línea.
-                            val isSelected = report!!.metadata.categoryId == category.id
-
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = null // El click lo maneja la Row completa
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = category.name,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showCategoryDialog = false }) {
-                    Text("Cancelar")
-                }
-            }
+        ChangeCategoryDialog(
+            categories = categories,
+            currentCategoryId = currentReport.metadata.categoryId,
+            onDismiss = { showCategoryDialog = false },
+            onCategorySelected = { category -> viewModel.updateReportCategory(currentReport, category.id) }
         )
     }
 
     if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("¿Eliminar reporte?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteReport(report!!)
-                    showDeleteDialog = false
-                    navController.popBackStack()
-                }) {
-                    Text("Eliminar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancelar")
-                }
+        DeleteReportDialog(
+            onDismiss = { showDeleteDialog = false },
+            onConfirm = {
+                viewModel.deleteReport(currentReport)
+                navController.popBackStack()
             }
         )
     }
 
+    // --- 6. Lógica de Overlay (Imagen) ---
+    if (selectedIssueForOverlay != null) {
+        val imageBytes = currentReport.metadata.image
 
-
-    if (showIssueDetailDialog && selectedIssue != null) {
-        val imageByteArray = report?.metadata?.image
-
-        // 1. Guardamos el tamaño real de la imagen escalada
-        var imageSize by remember { mutableStateOf(IntSize.Zero) }
-
-        val imageBitmap: ImageBitmap = remember(imageByteArray) {
-            imageByteArray?.let {
+        // Decodificación eficiente usando remember
+        val imageBitmap = remember(imageBytes) {
+            imageBytes?.let {
                 try {
                     BitmapFactory.decodeByteArray(it, 0, it.size).asImageBitmap()
                 } catch (e: Exception) { null }
-            } as ImageBitmap
+            }
         }
 
-        ImageOverlayDialog(
-            imageBitmap = imageBitmap,
-            // Transform your specific data into the generic list needed by the component
-            boundingBoxes = selectedIssue!!.barriers.map { it.toBoundingBox() },
-            onDismissRequest = { showIssueDetailDialog = false },
-            overlayColor = Color.Red // Optional, defaults to Red
-        )
+        if (imageBitmap != null) {
+            ImageOverlayDialog(
+                imageBitmap = imageBitmap,
+                boundingBoxes = selectedIssueForOverlay!!.barriers.map { it.toBoundingBox() },
+                onDismissRequest = { selectedIssueForOverlay = null },
+                overlayColor = Color.Red
+            )
+        } else {
+            // Fallback si no hay imagen (opcional: cerrar el diálogo o mostrar error)
+            LaunchedEffect(Unit) { selectedIssueForOverlay = null }
+        }
     }
-
-
-
-
 }
