@@ -43,14 +43,17 @@ fun ReportListScreen(
     var text by remember { mutableStateOf("") }
     var newName by remember { mutableStateOf("") }
 
-    // Launchers para cámara/galería
+// Launchers para cámara/galería
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            navController.navigate("cameraDetection?imageUri=$it")
+            viewModel.prepareForCaptureWithImage(it)
+            navController.navigate("cameraDetection")
         }
     }
+
+
 
     Scaffold(
         topBar = {
@@ -133,6 +136,10 @@ fun ReportListScreen(
     }
 
     showRenameDialog?.let { category ->
+        LaunchedEffect(category) {
+            newName = category.name
+        }
+
         AlertDialog(
             onDismissRequest = { showRenameDialog = null },
             title = { Text("Nuevo nombre") },

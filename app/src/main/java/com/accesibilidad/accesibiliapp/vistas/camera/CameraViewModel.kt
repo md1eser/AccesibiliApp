@@ -2,6 +2,7 @@ package com.accesibilidad.accesibiliapp.vistas.camera
 
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -24,7 +25,8 @@ import javax.inject.Inject
 @HiltViewModel
 class CameraViewModel @Inject constructor(
     private val captureRepository: CaptureRepository,
-    private val detector: Detector
+    private val detector: Detector,
+    private val imageHelper: ImageHelper
 ) : ViewModel() {
 
     companion object {
@@ -34,6 +36,10 @@ class CameraViewModel @Inject constructor(
     // --- Estados Privados (Mutable) ---
     private val _detectionResult = MutableStateFlow<DetectionResult?>(null)
     private val _isDetectorInitialized = MutableStateFlow(false)
+
+    private val _isProcessingExternalImage = MutableStateFlow(captureRepository.imageUri.value != null)
+    val isProcessingExternalImage = _isProcessingExternalImage.asStateFlow()
+
     private val _inferenceTime = MutableStateFlow(0L)
 
     // Canal para eventos de "una sola vez" (Navegación)
@@ -44,17 +50,23 @@ class CameraViewModel @Inject constructor(
     private var lastDetectionResult: DetectionResult? = null
 
     init {
-        // 1. Inicializar el detector
         viewModelScope.launch {
             try {
-                Log.d(TAG, "Inicializando detector...")
                 detector.initialize()
                 _isDetectorInitialized.value = true
-                Log.d(TAG, "Detector inicializado correctamente")
+
+                // VERIFICACIÓN LIMPIA
+                val pendingUri = captureRepository.imageUri.value
+                if (pendingUri != null) {
+                    processGalleryImage(pendingUri)
+                }
+
             } catch (e: Exception) {
                 Log.e(TAG, "Error inicializando detector", e)
+                _isProcessingExternalImage.value = false
             }
         }
+
 
         // 2. Suscribirse a los resultados del detector
         detector.results
@@ -72,7 +84,6 @@ class CameraViewModel @Inject constructor(
                     Log.d(TAG, "  Size: w=${box.w}, h=${box.h}")
                     Log.d(TAG, "  Bounds: x2=${box.x1 + box.w}, y2=${box.y1 + box.h}")
 
-                    // Verificar si las coordenadas están dentro de la imagen
                     val isValid = box.x1 >= 0 && box.y1 >= 0 &&
                             (box.x1 + box.w) <= result.bitmap.width &&
                             (box.y1 + box.h) <= result.bitmap.height
@@ -83,11 +94,29 @@ class CameraViewModel @Inject constructor(
                 _detectionResult.value = result
                 _inferenceTime.value = result.inferenceTime
                 lastDetectionResult = result
+                if (_isProcessingExternalImage.value) {
+                    Log.d(TAG, "Navigation trigger requested")
+                    onCaptureRequest()
+                }
             }
             .launchIn(viewModelScope)
     }
 
     // --- MÉTODOS PÚBLICOS (API EXACTA PARA LA UI) ---
+
+    private fun processGalleryImage(uri: Uri) {
+        viewModelScope.launch {
+            // Usamos el helper. El ViewModel no toca el contexto.
+            val bitmap = imageHelper.getBitmapFromUri(uri)
+
+            if (bitmap != null) {
+                processFrame(bitmap, triggerNavigation = true)
+            } else {
+                Log.e(TAG, "No se pudo cargar la imagen")
+                _isProcessingExternalImage.value = false
+            }
+        }
+    }
 
     fun getDetectionResult(): StateFlow<DetectionResult?> {
         return _detectionResult.asStateFlow()
@@ -119,15 +148,8 @@ class CameraViewModel @Inject constructor(
                     Log.d(TAG, "Detector inactive - restarting")
                     detector.restart()
                 }
-
-                // Ejecutar detección
                 detector.detect(bitmap)
 
-                // Si fue solicitado (ej. imagen estática), navegar al terminar
-                if (triggerNavigation) {
-                    Log.d(TAG, "Navigation trigger requested")
-                    onCaptureRequest()
-                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error processing frame", e)
             }

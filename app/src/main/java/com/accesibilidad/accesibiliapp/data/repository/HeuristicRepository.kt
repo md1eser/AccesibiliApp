@@ -19,7 +19,6 @@ import javax.inject.Singleton
 private val heuristicModule = SerializersModule {
     polymorphic(Heuristic::class) {
         subclass(ExistenceHeuristic::class, ExistenceHeuristic.serializer())
-        // Agrega aquí otras subclases de Heuristic cuando las tengas
     }
 }
 

@@ -7,6 +7,7 @@ import com.accesibilidad.accesibiliapp.data.deteccion.Detector
 import com.accesibilidad.accesibiliapp.data.repository.CaptureRepository
 import com.accesibilidad.accesibiliapp.util.MainDispatcherRule
 import com.accesibilidad.accesibiliapp.vistas.camera.CameraViewModel
+import com.accesibilidad.accesibiliapp.vistas.camera.ImageHelper
 import io.mockk.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -34,22 +35,19 @@ class CameraViewModelTest {
     private lateinit var captureRepository: CaptureRepository
     private lateinit var detector: Detector
     private lateinit var viewModel: CameraViewModel
-
+    private lateinit var helper : ImageHelper
     private val detectorResultsFlow = MutableSharedFlow<DetectionResult>()
 
     @Before
     fun setUp() {
         captureRepository = mockk(relaxed = true)
         detector = mockk(relaxed = true)
+        helper = mockk(relaxed=true)
 
-        // NOTA: Con Robolectric NO hace falta mockear Log.
-        // Robolectric redirige Log.d, Log.e, etc. a stdout automáticamente.
-
-        // Configuración del Flow y del Detector
         every { detector.results } returns detectorResultsFlow
         coEvery { detector.initialize() } just Runs
 
-        viewModel = CameraViewModel(captureRepository, detector)
+        viewModel = CameraViewModel(captureRepository, detector, helper)
     }
 
     @After

@@ -30,15 +30,39 @@ fun CameraDetectionScreen(
     navController: NavController,
     viewModel: CameraViewModel = hiltViewModel()
 ) {
-    CameraDetectionContent(
-        navController = navController,
-        viewModel = viewModel
-    )
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val isProcessingExternal by viewModel.isProcessingExternalImage.collectAsState()
+    val isDetectorInitialized by viewModel.isDetectorInitialized().collectAsState()
+
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.getNavigationEvent().collect {
+                navController.navigate("boundingBoxCuration") {
+                    if (isProcessingExternal) {
+                        popUpTo("cameraDetection") {
+                            inclusive = true
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+
+    if (isProcessingExternal) {
+        LoadingScreen(text = "Procesando imagen...")
+    }
+    else if (!isDetectorInitialized) {
+        // Cargando motor IA
+        LoadingScreen(text = "Iniciando detector...")
+    }
+    else {
+        CameraDetectionContent(viewModel = viewModel)
+    }
 }
 
 @Composable
 private fun CameraDetectionContent(
-    navController: NavController,
     viewModel: CameraViewModel
 ) {
     val context = LocalContext.current
@@ -60,9 +84,6 @@ private fun CameraDetectionContent(
         hasCameraPermission = isGranted
     }
 
-    // Estado de inicialización del detector
-    val isDetectorInitialized by viewModel.isDetectorInitialized().collectAsState()
-
     // Solicitar permiso automáticamente si no está concedido
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
@@ -72,16 +93,10 @@ private fun CameraDetectionContent(
 
     when {
         hasCameraPermission -> {
-            if (isDetectorInitialized) {
-                // Si hay permiso y el detector está listo, mostramos la cámara
-                CameraWithDetection(
-                    navController = navController,
-                    viewModel = viewModel
-                )
-            } else {
-                // Pantalla de carga mientras se inicializa TensorFlow/Modelo
-                LoadingScreen(text = "Cargando el detector...")
-            }
+            CameraWithDetection(
+                viewModel = viewModel
+            )
+
         }
         else -> {
             // UI para solicitar permiso manualmente si fue denegado
@@ -96,7 +111,6 @@ private fun CameraDetectionContent(
 
 @Composable
 private fun CameraWithDetection(
-    navController: NavController,
     viewModel: CameraViewModel = hiltViewModel()
 ) {
     // 1. Colección de estados del ViewModel
@@ -105,7 +119,6 @@ private fun CameraWithDetection(
 
     // 2. Estado local de la UI
     var isCameraPaused by remember { mutableStateOf(false) }
-    val lifecycleOwner = LocalLifecycleOwner.current
 
     // 3. Efectos (Side-Effects)
 
@@ -114,14 +127,6 @@ private fun CameraWithDetection(
         viewModel.resetCaptureRepository()
     }
 
-    // Escuchar evento de navegación hacia "boundingBoxCuration"
-    LaunchedEffect(lifecycleOwner) {
-        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            viewModel.getNavigationEvent().collect {
-                navController.navigate("boundingBoxCuration")
-            }
-        }
-    }
 
     // 4. Interfaz de Usuario
     Scaffold(

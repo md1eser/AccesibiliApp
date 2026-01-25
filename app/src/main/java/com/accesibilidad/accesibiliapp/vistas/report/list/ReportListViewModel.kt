@@ -108,10 +108,12 @@ class ReportListViewModel @Inject constructor(
     }
 
     fun prepareForCapture() {
+        captureRepository.clear()
         captureRepository.setCategoryId(currentParentId.value)
     }
 
     fun prepareForCaptureWithImage(imageUri: Uri) {
+        captureRepository.clear()
         captureRepository.setCategoryId(currentParentId.value)
         captureRepository.setImageUri(imageUri)
     }
