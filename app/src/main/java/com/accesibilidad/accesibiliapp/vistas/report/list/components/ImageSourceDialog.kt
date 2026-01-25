@@ -1,4 +1,4 @@
-package com.accesibilidad.accesibiliapp.vistas.report.list
+package com.accesibilidad.accesibiliapp.vistas.report.list.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -41,7 +41,7 @@ fun ImageSourceDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp)
+                    //.padding(top = 8.dp)
             ) {
                 // Opción Cámara
                 SourceOptionItem(

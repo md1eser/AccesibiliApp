@@ -1,4 +1,4 @@
-package com.accesibilidad.accesibiliapp.vistas.report.list
+package com.accesibilidad.accesibiliapp.vistas.report.list.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
