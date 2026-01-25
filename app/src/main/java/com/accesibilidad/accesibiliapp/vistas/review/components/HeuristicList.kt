@@ -1,4 +1,4 @@
-package com.accesibilidad.accesibiliapp.vistas.review
+package com.accesibilidad.accesibiliapp.vistas.review.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn

@@ -1,52 +1,49 @@
 package com.accesibilidad.accesibiliapp.vistas.review
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.*
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.navigation.NavController
 import androidx.hilt.navigation.compose.hiltViewModel
-import kotlinx.coroutines.launch // Importante para lanzar la corrutina
+import androidx.navigation.NavController
 import com.accesibilidad.accesibiliapp.vistas.common.ImageOverlayDialog
+import com.accesibilidad.accesibiliapp.vistas.review.components.ReportNameDialog
+import com.accesibilidad.accesibiliapp.vistas.review.components.ReviewTopBar
+import com.accesibilidad.accesibiliapp.vistas.review.components.HeuristicList
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeuristicReviewScreen(
     navController: NavController,
     viewModel: HeuristicReviewViewModel = hiltViewModel()
 ) {
-    // 1. Necesitamos un Scope para lanzar acciones asíncronas desde botones (UI Events)
     val scope = rememberCoroutineScope()
 
-    // Recolectar estados del ViewModel
+    // 1. State Collection
     val allIssues by viewModel.allIssues.collectAsState()
     val issuesByHeuristic by viewModel.issues.collectAsState()
     val dismissedHeuristics by viewModel.dismissedHeuristics.collectAsState()
 
-    // Estados locales de la UI
+    // 2. Local UI State
     var showNameReportDialog by remember { mutableStateOf(false) }
-    var reportNameText by remember { mutableStateOf("") }
     var showImageOverlayDialog by remember { mutableStateOf(false) }
     var selectedHeuristicName by remember { mutableStateOf("") }
 
-
-    val totalIssues = issuesByHeuristic.values.sumOf { it.size }
-    val image = viewModel.getImage()?.asImageBitmap();
+    // 3. Derived State
+    val totalIssues = remember(issuesByHeuristic) { issuesByHeuristic.values.sumOf { it.size } }
+    val image = viewModel.getImage()?.asImageBitmap()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Problemáticas ($totalIssues)") },
-                actions = {
-                    TextButton(onClick = { showNameReportDialog = true }) {
-                        Text("Continuar")
-                    }
-                }
+            ReviewTopBar(
+                issueCount = totalIssues,
+                onContinueClick = { showNameReportDialog = true }
             )
         }
     ) { paddingValues ->
+
         HeuristicList(
             modifier = Modifier.padding(paddingValues),
             allIssues = allIssues,
@@ -66,63 +63,43 @@ fun HeuristicReviewScreen(
         )
     }
 
-    // --- Lógica del Diálogo y Guardado ---
-    if (showNameReportDialog) {
-        AlertDialog(
-            onDismissRequest = { showNameReportDialog = false },
-            title = { Text("Nombre del reporte") },
-            text = {
-                OutlinedTextField(
-                    value = reportNameText,
-                    onValueChange = { reportNameText = it },
-                    label = { Text("Nombre") },
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    // 2. Lanzamos la corrutina aquí
-                    scope.launch {
-                        // Llamamos a la función suspendida del ViewModel
-                        val reportId = viewModel.generateReport(reportNameText)
+    // --- Dialogs ---
 
-                        if (reportId != null) {
-                            showNameReportDialog = false
-                            // 3. Navegamos al detalle del reporte usando el ID generado
-                            // El 'popUpTo' evita que el usuario vuelva a esta pantalla con "Atrás"
-                            navController.navigate("reports/$reportId") {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
+    if (showNameReportDialog) {
+        ReportNameDialog(
+            onDismiss = { showNameReportDialog = false },
+            onConfirm = { reportName ->
+                // Keep the async logic here in the Screen, the Dialog shouldn't know about Coroutines
+                scope.launch {
+                    val reportId = viewModel.generateReport(reportName)
+                    if (reportId != null) {
+                        showNameReportDialog = false
+                        navController.navigate("reports/$reportId") {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
                         }
                     }
-                }) {
-                    Text("Guardar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showNameReportDialog = false }) {
-                    Text("Cancelar")
                 }
             }
         )
     }
 
-
+    // Logic for the Overlay is now cleaner
     if (showImageOverlayDialog && image != null) {
+        // Calculate boxes only when dialog is shown
+        val boundingBoxes = remember(selectedHeuristicName, issuesByHeuristic) {
+            issuesByHeuristic[selectedHeuristicName]
+                ?.flatMap { it.barriers }
+                ?.map { it.toBoundingBox() }
+                ?: emptyList()
+        }
 
         ImageOverlayDialog(
             imageBitmap = image,
-            boundingBoxes = issuesByHeuristic[selectedHeuristicName]
-                ?.flatMap { it.barriers }
-                ?.map { it.toBoundingBox() }
-                ?: emptyList(),
+            boundingBoxes = boundingBoxes,
             onDismissRequest = { showImageOverlayDialog = false },
             overlayColor = Color.Red
         )
     }
-
 }
