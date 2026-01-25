@@ -20,7 +20,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.accesibilidad.accesibiliapp.vistas.camera.CameraDetectionScreen
-import com.accesibilidad.accesibiliapp.vistas.camera.ImageDetectionContent
 import com.accesibilidad.accesibiliapp.ui.theme.AccesibiliAppTheme
 import com.accesibilidad.accesibiliapp.vistas.curation.BoundingBoxCurationScreen
 import com.accesibilidad.accesibiliapp.vistas.report.details.ReportDetailsScreen
@@ -59,24 +58,6 @@ fun Screen() {
         // Menú de heurísticas
         composable("heuristicMenu") {
             HeuristicListScreen(navController = navController)
-        }
-
-        // Detección de imagen desde URI (Argumento opcional)
-        composable(
-            route = "cameraDetection?imageUri={imageUri}",
-            arguments = listOf(
-                navArgument("imageUri") {
-                    type = NavType.StringType
-                    nullable = true // Importante para argumentos opcionales con '?'
-                    defaultValue = null
-                }
-            )
-        ) { backStackEntry ->
-            val imageUri = backStackEntry.arguments?.getString("imageUri")
-            ImageDetectionContent(
-                navController = navController,
-                imageUri = imageUri
-            )
         }
 
         // Detección desde cámara
