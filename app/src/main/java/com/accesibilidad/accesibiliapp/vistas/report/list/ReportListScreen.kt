@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -174,23 +176,19 @@ fun ReportListScreen(
 
     // Diálogo de fuente de imagen (Cámara o Galería)
     if (showImageSourceDialog) {
-        // Implementación lógica inferida
-        AlertDialog(
-            onDismissRequest = { showImageSourceDialog = false },
-            title = { Text("Seleccionar fuente") },
-            confirmButton = {
-                Button(onClick = {
-                    showImageSourceDialog = false
-                    viewModel.prepareForCapture()
-                    navController.navigate("cameraDetection")
-                }) { Text("Cámara") }
+        ImageSourceDialog(
+            onDismiss = { showImageSourceDialog = false },
+            onCameraClick = {
+                showImageSourceDialog = false
+                viewModel.prepareForCapture()
+                navController.navigate("cameraDetection")
             },
-            dismissButton = {
-                Button(onClick = {
-                    showImageSourceDialog = false
-                    imagePickerLauncher.launch("image/*")
-                }) { Text("Galería") }
+            onGalleryClick = {
+                showImageSourceDialog = false
+                imagePickerLauncher.launch("image/*")
             }
         )
     }
+
+
 }
